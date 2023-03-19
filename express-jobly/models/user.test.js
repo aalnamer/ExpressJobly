@@ -13,6 +13,7 @@ const {
   commonAfterEach,
   commonAfterAll,
 } = require("./_testCommon");
+const { sqlForPartialUpdate } = require("../helpers/sql");
 
 beforeAll(commonBeforeAll);
 beforeEach(commonBeforeEach);
@@ -163,6 +164,19 @@ describe("update", function () {
     isAdmin: true,
   };
 
+  // TEST FOR sqlForPartialUpdate
+  test("Update sqlForPartialUpdate Unit Test", async function () {
+    let { setCols, values } = sqlForPartialUpdate(updateData, {
+      firstName: "first_name",
+      lastName: "last_name",
+      isAdmin: "is_admin",
+    });
+    expect(setCols).toEqual(
+      '"first_name"=$1, "last_name"=$2, "email"=$3, "is_admin"=$4'
+    );
+    expect(values).toEqual(["NewF", "NewF", "new@email.com", true]);
+  });
+
   test("works", async function () {
     let job = await User.update("u1", updateData);
     expect(job).toEqual({
@@ -214,8 +228,7 @@ describe("update", function () {
 describe("remove", function () {
   test("works", async function () {
     await User.remove("u1");
-    const res = await db.query(
-        "SELECT * FROM users WHERE username='u1'");
+    const res = await db.query("SELECT * FROM users WHERE username='u1'");
     expect(res.rows.length).toEqual(0);
   });
 
