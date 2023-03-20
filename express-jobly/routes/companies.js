@@ -5,7 +5,7 @@
 const jsonschema = require("jsonschema");
 const express = require("express");
 
-const { BadRequestError } = require("../expressError");
+const { BadRequestError, ExpressError } = require("../expressError");
 const { ensureLoggedIn } = require("../middleware/auth");
 const Company = require("../models/company");
 
@@ -13,7 +13,6 @@ const companyNewSchema = require("../schemas/companyNew.json");
 const companyUpdateSchema = require("../schemas/companyUpdate.json");
 
 const router = new express.Router();
-
 
 /** POST / { company } =>  { company }
  *
@@ -28,7 +27,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyNewSchema);
     if (!validator.valid) {
-      const errs = validator.errors.map(e => e.stack);
+      const errs = validator.errors.map((e) => e.stack);
       throw new BadRequestError(errs);
     }
 
@@ -50,9 +49,62 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  * Authorization required: none
  */
 
+// router.get("/", async function (req, res, next) {
+//   try {
+//     const companies = await Company.findAll();
+//     return res.json({ companies });
+//   } catch (err) {
+//     return next(err);
+//   }
+// });
+
 router.get("/", async function (req, res, next) {
   try {
-    const companies = await Company.findAll();
+    let name = req.query.name;
+    let minEmployees = Number(req.query.minEmployees);
+    let maxEmployees = Number(req.query.maxEmployees);
+    console.log(name);
+    console.log(req.query);
+
+    if (name && minEmployees && !maxEmployees) {
+      throw new ExpressError(
+        "Minimum/Max Employees required when either is stated.",
+        401
+      );
+    }
+
+    if (!name && !minEmployees && !maxEmployees) {
+      let companies = await Company.findAll();
+      return res.json({ companies });
+    }
+
+    if (!minEmployees && !maxEmployees) {
+      let companies = await Company.getByName(name);
+      return res.json({ companies });
+    }
+
+    if (!name) {
+      if (minEmployees > maxEmployees) {
+        throw new ExpressError(
+          "Minimum Employees cannot be greater than Max Employees",
+          400
+        );
+      }
+      let companies = await Company.getByEmployees(minEmployees, maxEmployees);
+      return res.json({ companies });
+    }
+
+    if (minEmployees > maxEmployees) {
+      throw new ExpressError(
+        "Minimum Employees cannot be greater than Max Employees",
+        400
+      );
+    }
+    let companies = await Company.getByEmployeesAndName(
+      name,
+      minEmployees,
+      maxEmployees
+    );
     return res.json({ companies });
   } catch (err) {
     return next(err);
@@ -91,7 +143,7 @@ router.patch("/:handle", ensureLoggedIn, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyUpdateSchema);
     if (!validator.valid) {
-      const errs = validator.errors.map(e => e.stack);
+      const errs = validator.errors.map((e) => e.stack);
       throw new BadRequestError(errs);
     }
 
@@ -115,6 +167,5 @@ router.delete("/:handle", ensureLoggedIn, async function (req, res, next) {
     return next(err);
   }
 });
-
 
 module.exports = router;
