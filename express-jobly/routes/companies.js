@@ -6,7 +6,7 @@ const jsonschema = require("jsonschema");
 const express = require("express");
 
 const { BadRequestError, ExpressError } = require("../expressError");
-const { ensureLoggedIn } = require("../middleware/auth");
+const { ensureLoggedIn, ensureAdmin } = require("../middleware/auth");
 const Company = require("../models/company");
 
 const companyNewSchema = require("../schemas/companyNew.json");
@@ -23,7 +23,7 @@ const router = new express.Router();
  * Authorization required: login
  */
 
-router.post("/", ensureLoggedIn, async function (req, res, next) {
+router.post("/", ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyNewSchema);
     if (!validator.valid) {
@@ -36,6 +36,10 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
   } catch (err) {
     return next(err);
   }
+});
+
+router.post("/admin/adminTest", ensureAdmin, function (req, res, next) {
+  return res.json({ msg: `WELCOME ${res.locals.user.username}` });
 });
 
 /** GET /  =>
@@ -69,7 +73,7 @@ router.get("/", async function (req, res, next) {
     if (name && minEmployees && !maxEmployees) {
       throw new ExpressError(
         "Minimum/Max Employees required when either is stated.",
-        401
+        400
       );
     }
 
@@ -139,7 +143,7 @@ router.get("/:handle", async function (req, res, next) {
  * Authorization required: login
  */
 
-router.patch("/:handle", ensureLoggedIn, async function (req, res, next) {
+router.patch("/:handle", ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyUpdateSchema);
     if (!validator.valid) {
@@ -159,7 +163,7 @@ router.patch("/:handle", ensureLoggedIn, async function (req, res, next) {
  * Authorization: login
  */
 
-router.delete("/:handle", ensureLoggedIn, async function (req, res, next) {
+router.delete("/:handle", ensureAdmin, async function (req, res, next) {
   try {
     await Company.remove(req.params.handle);
     return res.json({ deleted: req.params.handle });

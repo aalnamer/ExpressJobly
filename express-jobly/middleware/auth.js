@@ -4,8 +4,7 @@
 
 const jwt = require("jsonwebtoken");
 const { SECRET_KEY } = require("../config");
-const { UnauthorizedError } = require("../expressError");
-
+const { UnauthorizedError, ExpressError } = require("../expressError");
 
 /** Middleware: Authenticate user.
  *
@@ -18,9 +17,11 @@ const { UnauthorizedError } = require("../expressError");
 function authenticateJWT(req, res, next) {
   try {
     const authHeader = req.headers && req.headers.authorization;
+    console.log(authHeader);
     if (authHeader) {
       const token = authHeader.replace(/^[Bb]earer /, "").trim();
       res.locals.user = jwt.verify(token, SECRET_KEY);
+      console.log("AUTH", res.locals.user);
     }
     return next();
   } catch (err) {
@@ -42,8 +43,35 @@ function ensureLoggedIn(req, res, next) {
   }
 }
 
+function ensureUser(req, res, next) {
+  try {
+    if (
+      res.locals.user.username !== req.params.username ||
+      !res.locals.user.isAdmin
+    ) {
+      return new ExpressError("Must be An User or Admin", 400);
+    }
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
+
+function ensureAdmin(req, res, next) {
+  try {
+    console.log(res.locals);
+    if (!res.locals.user || !res.locals.user.isAdmin) {
+      return new next(new ExpressError("Must be an Admin.", 401));
+    }
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
 
 module.exports = {
   authenticateJWT,
   ensureLoggedIn,
+  ensureAdmin,
+  ensureUser,
 };
