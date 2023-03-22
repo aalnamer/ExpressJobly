@@ -9,10 +9,11 @@ class Job {
     const result = await db.query(
       `INSERT INTO jobs
            (title, salary, equity, company_handle)
-           VALUES ($1, $2, $3, $4, $5)
-           RETURNING title, salary, equity, company_handle AS "companyHandle"`,
+           VALUES ($1, $2, $3, $4)
+           RETURNING title, salary, equity, company_handle AS "companyHandle",id`,
       [title, salary, equity, companyHandle]
     );
+
     const job = result.rows[0];
 
     return job;
@@ -20,7 +21,7 @@ class Job {
   static async findAll() {
     const jobsRes = await db.query(
       `SELECT 
-      title, salary, equity, company_handle AS "companyHandle"
+      title, salary, equity,id, company_handle AS "companyHandle"
            FROM jobs
            ORDER BY title`
     );
@@ -119,7 +120,7 @@ class Job {
 
     return job;
   }
-  static async getByTitleSalaryEquity(title) {
+  static async getByTitleSalaryEquity(title, minSalary) {
     let strTitle = "%" + title + "%";
     const jobRes = await db.query(
       `SELECT 
@@ -185,17 +186,17 @@ class Job {
 
     return job;
   }
-  static async remove(title) {
+  static async remove(id) {
     const result = await db.query(
       `DELETE
            FROM jobs
-           WHERE title = $1
-           RETURNING title`,
-      [title]
+           WHERE id = $1
+           RETURNING id`,
+      [id]
     );
     const job = result.rows[0];
 
-    if (!job) throw new NotFoundError(`No job: ${title}`);
+    if (!job) throw new NotFoundError(`No job: ${id}`);
   }
 }
 

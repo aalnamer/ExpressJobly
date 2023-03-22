@@ -10,6 +10,22 @@ const jobUpdateSchema = require("../schemas/jobsUpdate.json");
 
 const router = new express.Router();
 
+router.post("/", ensureAdmin, async function (req, res, next) {
+  try {
+    const validator = jsonschema.validate(req.body, jobNewSchema);
+    if (!validator.valid) {
+      const errs = validator.errors.map((e) => e.stack);
+      throw new BadRequestError(errs);
+    }
+
+    const job = await Job.create(req.body);
+
+    return res.status(201).json({ job });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get("/", async function (req, res, next) {
   try {
     let title = req.query.title;
@@ -95,10 +111,10 @@ router.patch("/:title", ensureAdmin, async function (req, res, next) {
   }
 });
 
-router.delete("/:title", ensureAdmin, async function (req, res, next) {
+router.delete("/:id", ensureAdmin, async function (req, res, next) {
   try {
-    await Job.remove(req.params.title);
-    return res.json({ deleted: req.params.title });
+    await Job.remove(req.params.id);
+    return res.json({ deleted: req.params.id });
   } catch (err) {
     return next(err);
   }
