@@ -116,5 +116,14 @@ router.delete("/:username", ensureUser, async function (req, res, next) {
     return next(err);
   }
 });
-
+router.post("/:username/jobs/:id", ensureUser, async function (req, res, next) {
+  try {
+    const jobId = req.params.id;
+    const username = req.params.username;
+    await User.applyToJob(username, jobId);
+    return res.json({ applied: jobId });
+  } catch (err) {
+    return next(err);
+  }
+});
 module.exports = router;
