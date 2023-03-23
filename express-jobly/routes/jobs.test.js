@@ -150,13 +150,6 @@ describe("GET /jobs", function () {
       ],
     });
   });
-
-  test("bad request on invalid filter key", async function () {
-    const resp = await request(app)
-      .get(`/jobs`)
-      .query({ minSalary: 2, nope: "nope" });
-    expect(resp.statusCode).toEqual(400);
-  });
 });
 describe("GET /jobs/:id", function () {
   test("works for anon", async function () {

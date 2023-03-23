@@ -5,7 +5,7 @@ const { UnauthorizedError } = require("../expressError");
 const {
   authenticateJWT,
   ensureLoggedIn,
-  ensureUser,
+  ensureCorrectUserOrAdmin,
   ensureAdmin,
 } = require("./auth");
 
@@ -105,14 +105,14 @@ describe("ensureAdmin", function () {
   });
 });
 
-describe("ensureUser", function () {
+describe("ensureCorrectUserOrAdmin", function () {
   test("same ueser", function () {
     const req = { params: { username: "test" } };
     const res = { locals: { user: { username: "test", isAdmin: false } } };
     const next = function (err) {
       expect(err).toBeFalsy();
     };
-    ensureUser(req, res, next);
+    ensureCorrectUserOrAdmin(req, res, next);
   });
   test("admin", function () {
     const req = { params: { username: "test" } };
@@ -120,7 +120,7 @@ describe("ensureUser", function () {
     const next = function (err) {
       expect(err).toBeFalsy();
     };
-    ensureUser(req, res, next);
+    ensureCorrectUserOrAdmin(req, res, next);
   });
   test("not user", function () {
     const req = { params: { username: "invalid" } };
@@ -128,7 +128,7 @@ describe("ensureUser", function () {
     const next = function (err) {
       expect(err).toBeTruthy();
     };
-    ensureUser(req, res, next);
+    ensureCorrectUserOrAdmin(req, res, next);
   });
   test("not logged in", function () {
     const req = { params: { username: "test" } };
@@ -136,6 +136,6 @@ describe("ensureUser", function () {
     const next = function (err) {
       expect(err).toBeTruthy();
     };
-    ensureUser(req, res, next);
+    ensureCorrectUserOrAdmin(req, res, next);
   });
 });

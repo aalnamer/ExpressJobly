@@ -71,11 +71,10 @@ class Company {
     }
     if (whereExpressions.length > 0) {
       query += " WHERE " + whereExpressions.join(" AND ");
-
-      query += " ORDER BY name";
-      const companiesRes = await db.query(query, queryValues);
-      return companiesRes.rows;
     }
+    query += " ORDER BY name";
+    const companiesRes = await db.query(query, queryValues);
+    return companiesRes.rows;
   }
 
   /** Given a company handle, return data about company.

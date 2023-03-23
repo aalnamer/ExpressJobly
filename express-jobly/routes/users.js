@@ -9,7 +9,6 @@ const {
   ensureLoggedIn,
   ensureAdmin,
   ensureCorrectUserOrAdmin,
-  ensureCorrectUserOrAdmin,
 } = require("../middleware/auth");
 const { BadRequestError } = require("../expressError");
 const User = require("../models/user");

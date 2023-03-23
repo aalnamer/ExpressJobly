@@ -45,6 +45,7 @@ router.get("/", async function (req, res, next) {
     return next(err);
   }
 });
+
 router.post("/", ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, jobNewSchema);
