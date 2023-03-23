@@ -11,6 +11,7 @@ const Company = require("../models/company");
 
 const companyNewSchema = require("../schemas/companyNew.json");
 const companyUpdateSchema = require("../schemas/companyUpdate.json");
+const companySearchSchema = require("../schemas/companySearch.json");
 
 const router = new express.Router();
 
@@ -64,51 +65,17 @@ router.post("/admin/adminTest", ensureAdmin, function (req, res, next) {
 
 router.get("/", async function (req, res, next) {
   try {
-    let name = req.query.name;
-    let minEmployees = Number(req.query.minEmployees);
-    let maxEmployees = Number(req.query.maxEmployees);
-    console.log(name);
-    console.log(req.query);
-
-    if (name && minEmployees && !maxEmployees) {
-      throw new ExpressError(
-        "Minimum/Max Employees required when either is stated.",
-        400
-      );
+    const query = req.query;
+    if (query.minEmployees !== undefined)
+      query.minEmployees = +query.minEmployees;
+    if (query.maxEmployees !== undefined)
+      query.maxEmployees = +query.maxEmployees;
+    const validate = jsonschema.validate(query, companySearchSchema);
+    if (!validate.valid) {
+      const errs = validate.errors.map((e) => e.stack);
+      throw new BadRequestError(errs);
     }
-
-    if (!name && !minEmployees && !maxEmployees) {
-      let companies = await Company.findAll();
-      return res.json({ companies });
-    }
-
-    if (!minEmployees && !maxEmployees) {
-      let companies = await Company.getByName(name);
-      return res.json({ companies });
-    }
-
-    if (!name) {
-      if (minEmployees > maxEmployees) {
-        throw new ExpressError(
-          "Minimum Employees cannot be greater than Max Employees",
-          400
-        );
-      }
-      let companies = await Company.getByEmployees(minEmployees, maxEmployees);
-      return res.json({ companies });
-    }
-
-    if (minEmployees > maxEmployees) {
-      throw new ExpressError(
-        "Minimum Employees cannot be greater than Max Employees",
-        400
-      );
-    }
-    let companies = await Company.getByEmployeesAndName(
-      name,
-      minEmployees,
-      maxEmployees
-    );
+    const companies = await Company.findAll(query);
     return res.json({ companies });
   } catch (err) {
     return next(err);

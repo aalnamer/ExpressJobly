@@ -7,6 +7,7 @@ const Job = require("../models/jobs");
 
 const jobNewSchema = require("../schemas/jobsNew.json");
 const jobUpdateSchema = require("../schemas/jobsUpdate.json");
+const jobSearchSchema = require("../schemas/jobSearch.json");
 
 const router = new express.Router();
 
@@ -27,45 +28,26 @@ router.post("/", ensureAdmin, async function (req, res, next) {
 });
 
 router.get("/", async function (req, res, next) {
-  try {
-    let title = req.query.title;
-    let minSalary = Number(req.query.minSalary);
-    let hasEquity = Boolean(req.query.hasEquity);
+  const q = req.query;
+  if (q.minSalary !== undefined) q.minSalary = +q.minSalary;
+  q.hasEquity = q.hasEquity === "true";
 
-    if (!title && !minSalary && (hasEquity === false || !hasEquity)) {
-      let jobs = await Job.findAll();
-      return res.json({ jobs });
+  try {
+    const validator = jsonschema.validate(q, jobSearchSchema);
+    if (!validator.valid) {
+      const errs = validator.errors.map((e) => e.stack);
+      throw new BadRequestError(errs);
     }
-    if (!minSalary) {
-      if (hasEquity) {
-        let jobs = await Job.getByTitleWithEquity(minSalary);
-        return res.json({ jobs });
-      }
-      let jobs = await Job.getByTitle(title);
-      return res.json({ jobs });
-    }
-    if (!title) {
-      if (hasEquity === true) {
-        let jobs = await Job.getBySalaryEquity(minSalary);
-        return res.json({ jobs });
-      }
-      let jobs = await Job.getBySalary(minSalary);
-      return res.json({ jobs });
-    }
-    if (!hasEquity === false || !hasEquity) {
-      let jobs = await Job.getBySalaryAndTitle(title, minSalary);
-      return res.json({ jobs });
-    }
-    let jobs = await Job.getByTitleSalaryEquity(title, minSalary);
+
+    const jobs = await Job.findAll(q);
     return res.json({ jobs });
   } catch (err) {
     return next(err);
   }
 });
-
 router.post("/", ensureAdmin, async function (req, res, next) {
   try {
-    const validator = jsonschema.validate(req.body, companyNewSchema);
+    const validator = jsonschema.validate(req.body, jobNewSchema);
     if (!validator.valid) {
       const errs = validator.errors.map((e) => e.stack);
       throw new BadRequestError(errs);
@@ -78,33 +60,24 @@ router.post("/", ensureAdmin, async function (req, res, next) {
   }
 });
 
-router.get("/:companyHandle", async function (req, res, next) {
+router.get("/:id", async function (req, res, next) {
   try {
-    const job = await Job.getByHandle(req.params.companyHandle);
+    const job = await Job.getId(req.params.id);
     return res.json({ job });
   } catch (err) {
     return next(err);
   }
 });
 
-router.get("/:title", async function (req, res, next) {
+router.patch("/:id", ensureAdmin, async function (req, res, next) {
   try {
-    const job = await Job.get(req.params.title);
-    return res.json({ job });
-  } catch (err) {
-    return next(err);
-  }
-});
-
-router.patch("/:title", ensureAdmin, async function (req, res, next) {
-  try {
-    const validator = jsonschema.validate(req.body, companyUpdateSchema);
+    const validator = jsonschema.validate(req.body, jobUpdateSchema);
     if (!validator.valid) {
       const errs = validator.errors.map((e) => e.stack);
       throw new BadRequestError(errs);
     }
 
-    const job = await job.update(req.params.title, req.body);
+    const job = await Job.update(req.params.id, req.body);
     return res.json({ job });
   } catch (err) {
     return next(err);
@@ -113,8 +86,9 @@ router.patch("/:title", ensureAdmin, async function (req, res, next) {
 
 router.delete("/:id", ensureAdmin, async function (req, res, next) {
   try {
+    console.log(req.params.id);
     await Job.remove(req.params.id);
-    return res.json({ deleted: req.params.id });
+    return res.json({ deleted: Number(req.params.id) });
   } catch (err) {
     return next(err);
   }

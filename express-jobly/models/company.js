@@ -44,18 +44,38 @@ class Company {
    * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
    * */
 
-  static async findAll() {
-    const companiesRes = await db.query(
-      `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           ORDER BY name`
-    );
+  static async findAll(searchFilters = {}) {
+    let query = `SELECT handle,
+    name,
+    description,
+    num_employees AS "numEmployees",
+    logo_url AS "logoUrl"
+    FROM companies`;
+    let whereExpressions = [];
+    let queryValues = [];
+    const { minEmployees, maxEmployees, name } = searchFilters;
+    if (minEmployees > maxEmployees) {
+      throw new BadRequestError("Min employees cannot be greater than max");
+    }
+    if (minEmployees !== undefined) {
+      queryValues.push(minEmployees);
+      whereExpressions.push(`num_employees >= $${queryValues.length}`);
+    }
+    if (maxEmployees !== undefined) {
+      queryValues.push(maxEmployees);
+      whereExpressions.push(`num_employees <= $${queryValues.length}`);
+    }
+    if (name) {
+      queryValues.push(`%${name}%`);
+      whereExpressions.push(`name ILIKE $${queryValues.length}`);
+    }
+    if (whereExpressions.length > 0) {
+      query += " WHERE " + whereExpressions.join(" AND ");
 
-    return companiesRes.rows;
+      query += " ORDER BY name";
+      const companiesRes = await db.query(query, queryValues);
+      return companiesRes.rows;
+    }
   }
 
   /** Given a company handle, return data about company.
@@ -90,59 +110,6 @@ class Company {
     );
 
     company.jobs = jobsRes.rows;
-    return company;
-  }
-  static async getByName(name) {
-    let strName = "%" + name + "%";
-    const companyRes = await db.query(
-      `SELECT handle,
-                  name,
-                  description,
-                  num_employees,
-                  logo_url AS "logoUrl"
-           FROM companies
-           WHERE lower(name) LIKE lower($1)`,
-      [strName]
-    );
-    const company = companyRes.rows;
-    if (!company)
-      throw new NotFoundError(`No company found with name: ${name}`);
-    return company;
-  }
-  static async getByEmployees(minEmployees, maxEmployees) {
-    const companyRes = await db.query(
-      `SELECT handle, name, description,
-      num_employees ,
-      logo_url AS "logoUrl"
-      FROM COMPANIES
-      WHERE num_employees BETWEEN $1 AND $2`,
-      [minEmployees, maxEmployees]
-    );
-    const company = companyRes.rows[0];
-    if (!company)
-      throw new NotFoundError(
-        `No company between: ${minEmployees} and ${maxEmployees}`
-      );
-    return company;
-  }
-  static async getByEmployeesAndName(name, minEmployees, maxEmployees) {
-    let strName = "%" + name + "%";
-    const companyRes = await db.query(
-      `SELECT handle,name, description,
-      num_employees,
-      logo_url AS "logoUrl"
-      FROM COMPANIES
-      WHERE lower(name) LIKE lower($1) AND
-      num_employees BETWEEN $2 AND $3`,
-      [strName, minEmployees, maxEmployees]
-    );
-
-    const company = companyRes.rows;
-
-    if (!company)
-      throw new NotFoundError(
-        `No company found with: name: ${name}, ${minEmployees} and ${maxEmployees}`
-      );
     return company;
   }
 

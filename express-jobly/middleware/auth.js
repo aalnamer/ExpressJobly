@@ -43,7 +43,7 @@ function ensureLoggedIn(req, res, next) {
   }
 }
 
-function ensureUser(req, res, next) {
+function ensureCorrectUserOrAdmin(req, res, next) {
   try {
     if (
       res.locals.user.username !== req.params.username ||
@@ -73,5 +73,5 @@ module.exports = {
   authenticateJWT,
   ensureLoggedIn,
   ensureAdmin,
-  ensureUser,
+  ensureCorrectUserOrAdmin,
 };
